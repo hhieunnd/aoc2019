@@ -1,11 +1,5 @@
-use std::{fs::File, io::Read};
-
 fn main() {
-    let file = File::open("input.txt");
-
-    let mut input = String::new();
-
-    let _ = file.unwrap().read_to_string(&mut input);
+    let input = std::fs::read_to_string("input.txt").unwrap();
 
     let lines = input.lines();
 

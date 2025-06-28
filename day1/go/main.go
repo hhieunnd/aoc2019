@@ -8,6 +8,11 @@ import (
 	"strconv"
 )
 
+type Result struct {
+	Part1 int
+	Part2 int
+}
+
 func main() {
 	file, err := os.Open("input.txt")
 	if err != nil {
@@ -17,31 +22,33 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 
-	// part 1
-	sum1 := 0
-
-	// part 2
-	sum2 := 0
+	var result Result
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		num, _ := strconv.Atoi(line)
+		num, err := strconv.Atoi(line)
+		if err != nil {
+			log.Fatalf("invalid number in input %s", err)
+		}
 
-		sum1 += (num/3 - 2)
-		sum2 += countToZero(num)
+		result.Part1 += fuelForMass(num)
+		result.Part2 += totalFuel(num)
 	}
 
-	fmt.Printf("sum 1: %d \n", sum1)
-	fmt.Printf("sum 2: %d \n", sum2)
+	fmt.Printf("sum 1: %d \nsum 2: %d \n", result.Part1, result.Part2)
 }
 
-func countToZero(num int) int {
+func fuelForMass(mass int) int {
+	return mass/3 - 2
+}
+
+func totalFuel(num int) int {
 	result := 0
-	for num > 0 {
-		num = num/3 - 2
+	for {
+		num = fuelForMass(num)
 		if num < 0 {
-			num = 0
+			break
 		}
 
 		result += num
