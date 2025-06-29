@@ -1,4 +1,7 @@
-use std::{collections::HashSet, fs};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Position {
@@ -6,88 +9,50 @@ struct Position {
     y: i32,
 }
 
+fn build_path(data: &str) -> (Vec<Position>, HashMap<Position, usize>) {
+    let mut path = Vec::new();
+    let mut steps_map = HashMap::new();
+    let mut pos = Position { x: 0, y: 0 };
+    path.push(pos);
+
+    let mut step_count = 0;
+
+    for item in data.split(',') {
+        let (dir, num) = item.split_at(1);
+        let step = num.parse::<i32>().unwrap();
+
+        for _ in 0..step {
+            match dir {
+                "U" => pos.y += 1,
+                "D" => pos.y -= 1,
+                "L" => pos.x -= 1,
+                "R" => pos.x += 1,
+                _ => panic!("Invalid direction"),
+            }
+
+            step_count += 1;
+            path.push(pos);
+            steps_map.entry(pos).or_insert(step_count);
+        }
+    }
+
+    (path, steps_map)
+}
+
 fn main() {
     let input = fs::read_to_string("input.txt").unwrap();
+    let data: Vec<&str> = input.trim().split('\n').collect();
 
-    let data: Vec<&str> = input.split("\n").collect();
+    let (wave1, steps1) = build_path(data[0]);
+    let (wave2, steps2) = build_path(data[1]);
 
-    let mut wave1: Vec<Position> = Vec::new();
-    wave1.push(Position { x: 0, y: 0 });
-
-    let mut wave2: Vec<Position> = Vec::new();
-    wave2.push(Position { x: 0, y: 0 });
-
-    let datawave1: Vec<&str> = data[0].split(",").collect();
-    let datawave2: Vec<&str> = data[1].split(",").collect();
-
-    for item in datawave1 {
-        let (dir, num) = item.split_at(1);
-        let last = wave1.last().unwrap().clone();
-        let step = num.parse::<i32>().expect("Invalid step");
-
-        if dir == "U" {
-            wave1.extend(((last.y + 1)..=(last.y + step)).map(|y| Position { x: last.x, y }));
-        } else if dir == "D" {
-            wave1.extend(
-                ((last.y - step)..=last.y - 1)
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .map(|y| Position { x: last.x, y }),
-            );
-        } else if dir == "L" {
-            wave1.extend(
-                ((last.x - step)..=(last.x - 1))
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .map(|x| Position { x, y: last.y }),
-            );
-        } else if dir == "R" {
-            wave1.extend(((last.x + 1)..=(last.x + step)).map(|x| Position { x, y: last.y }));
-        }
-    }
-
-    for item in datawave2 {
-        let (dir, num) = item.split_at(1);
-        let last = wave2.last().unwrap().clone();
-        let step = num.parse::<i32>().expect("Invalid step");
-
-        if dir == "U" {
-            wave2.extend(((last.y + 1)..=(last.y + step)).map(|y| Position { x: last.x, y }));
-        } else if dir == "D" {
-            wave2.extend(
-                ((last.y - step)..=last.y - 1)
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .map(|y| Position { x: last.x, y }),
-            );
-        } else if dir == "L" {
-            wave2.extend(
-                ((last.x - step)..=(last.x - 1))
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                    .map(|x| Position { x, y: last.y }),
-            );
-        } else if dir == "R" {
-            wave2.extend(((last.x + 1)..=(last.x + step)).map(|x| Position { x, y: last.y }));
-        }
-    }
-
-    let set1: HashSet<Position> = wave1.iter().cloned().collect();
-    let intersection: Vec<Position> = wave2
-        .iter()
-        .filter(|x| set1.contains(x))
-        .cloned()
-        .filter(|p| !(p.x == 0 && p.y == 0))
+    let set1: HashSet<Position> = wave1.into_iter().collect();
+    let intersection: Vec<_> = wave2
+        .into_iter()
+        .filter(|p| set1.contains(p) && !(p.x == 0 && p.y == 0))
         .collect();
 
-    let min_pos = intersection.iter().min_by_key(|p| p.x.abs() + p.y.abs());
-
-    // part 1
-    if let Some(pos) = min_pos {
+    if let Some(pos) = intersection.iter().min_by_key(|p| p.x.abs() + p.y.abs()) {
         println!(
             "Min sum x+y: {}, position: ({}, {})",
             pos.x.abs() + pos.y.abs(),
@@ -96,23 +61,12 @@ fn main() {
         );
     }
 
-    // part 2
-    let mut min_sum = usize::MAX;
-    let mut min_point = None;
+    let (point, min_sum) = intersection
+        .iter()
+        .filter(|p| steps1.contains_key(p) && steps2.contains_key(p))
+        .map(|p| (*p, steps1[p] + steps2[p]))
+        .min_by_key(|&(_, sum)| sum)
+        .unwrap();
 
-    for point in &intersection {
-        if let Some(index1) = wave1.iter().position(|p| p == point) {
-            if let Some(index2) = wave2.iter().position(|p| p == point) {
-                let sum = index1 + index2;
-                if sum < min_sum {
-                    min_sum = sum;
-                    min_point = Some(point);
-                }
-            }
-        }
-    }
-
-    if let Some(point) = min_point {
-        println!("Point ({}, {}) min: {}", point.x, point.y, min_sum);
-    }
+    println!("Point ({}, {}) min: {}", point.x, point.y, min_sum);
 }
